@@ -1,14 +1,12 @@
-
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState, type FormEvent } from "react";
-
 import TextField from "../Components/Textfield";
 import SubmitButton from "../Components/SubmitButton";
 import { depositMethods } from "../data/paymentmethod";
 import { money } from "../lib/format";
+import { getProfile } from "../lib/auth";
 import type { Transaction } from "../types/planType";
-
 import {
   Banner,
   Card,
@@ -16,7 +14,6 @@ import {
   PageHeader,
   TransactionTable,
 } from "../Components/Ui";
-
 import {
   getDeposits,
   createDeposit,
@@ -35,12 +32,19 @@ type DepositHistoryItem = {
   date: string;
 };
 
+type Profile = {
+  id?: string | number;
+  uid?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+};
+
 function formatDepositDate(value: string | number): string {
   const date =
     typeof value === "number"
-      ? new Date(
-          value < 1_000_000_000_000 ? value * 1000 : value
-        )
+      ? new Date(value < 1_000_000_000_000 ? value * 1000 : value)
       : new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -54,9 +58,7 @@ function formatDepositDate(value: string | number): string {
   });
 }
 
-function normalizeStatus(
-  status: string
-): Transaction["status"] {
+function normalizeStatus(status: string): Transaction["status"] {
   const value = status.toLowerCase();
 
   if (
@@ -65,23 +67,10 @@ function normalizeStatus(
     return "completed";
   }
 
-  if (
-    [
-      "failed",
-      "error",
-      "reversed",
-      "refunded",
-    ].includes(value)
-  ) {
-    return "pending";
-  }
-
   return "pending";
 }
 
-function toHistoryItem(
-  deposit: DepositType
-): DepositHistoryItem {
+function toHistoryItem(deposit: DepositType): DepositHistoryItem {
   return {
     id: String(deposit.id),
     reference: String(deposit.id),
@@ -125,24 +114,19 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function Deposit() {
-  const [methodId, setMethodId] = useState(
-    depositMethods[0].id
-  );
-
+  const [methodId, setMethodId] = useState(depositMethods[0].id);
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
-
   const [deposits, setDeposits] = useState<DepositType[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
   const method =
-    depositMethods.find((m) => m.id === methodId) ??
+    depositMethods.find((item) => item.id === methodId) ??
     depositMethods[0];
 
-  // Fetch deposit history.
   async function loadDeposits() {
     setLoadingHistory(true);
     setHistoryError("");
@@ -162,24 +146,16 @@ export default function Deposit() {
     void loadDeposits();
   }, []);
 
-  // Create a deposit request.
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const n = Number(amount);
 
-    if (
-      !amount.trim() ||
-      !Number.isFinite(n) ||
-      n < MIN_DEPOSIT
-    ) {
-      setError(
-        `The minimum deposit is ${money(MIN_DEPOSIT)}.`
-      );
+    if (!amount.trim() || !Number.isFinite(n) || n < MIN_DEPOSIT) {
+      setError(`The minimum deposit is ${money(MIN_DEPOSIT)}.`);
       return;
     }
 
-    // The backend accepts only BTC, SOL, or ETH.
     const selectedMethod = String(method.id).toUpperCase();
 
     if (!["BTC", "SOL", "ETH"].includes(selectedMethod)) {
@@ -194,18 +170,30 @@ export default function Deposit() {
     setSubmitting(true);
 
     try {
-      // Sender information is populated by the backend
-      // from the authenticated user's account.
+      // Get the currently authenticated user's profile.
+      const profile = (await getProfile()) as Profile;
+
+      // Use the user's identity, not their crypto wallet address.
+      const from =
+        profile.email?.trim() ||
+        [profile.firstName, profile.lastName].filter(Boolean).join(" ").trim() ||
+        profile.name?.trim();
+
+      if (!from) {
+        throw new Error(
+          "Your account information could not be retrieved. Please log in again."
+        );
+      }
+
       await createDeposit({
-          amount: n,
-          method: selectedMethod as "BTC" | "SOL" | "ETH",
-          from: ""
+        amount: n,
+        method: selectedMethod as "BTC" | "SOL" | "ETH",
+        from,
       });
 
       setDone(true);
       setAmount("");
 
-      // Refresh history after a successful request.
       await loadDeposits();
     } catch (err) {
       console.error("Failed to create deposit:", err);
@@ -215,8 +203,7 @@ export default function Deposit() {
     }
   }
 
-  const depositHistory: DepositHistoryItem[] =
-    deposits.map(toHistoryItem);
+  const depositHistory: DepositHistoryItem[] = deposits.map(toHistoryItem);
 
   return (
     <>
@@ -227,30 +214,26 @@ export default function Deposit() {
 
       {done && (
         <Banner tone="success">
-          Your deposit request has been submitted successfully.
-          Your balance will update once the payment is confirmed.
+          Your deposit request has been submitted successfully. Your balance
+          will update once the payment is confirmed.
         </Banner>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* DEPOSIT FORM */}
         <Card>
-          <form
-            onSubmit={onSubmit}
-            noValidate
-            className="space-y-6"
-          >
+          <form onSubmit={onSubmit} noValidate className="space-y-6">
             <fieldset>
               <legend className="text-sm font-medium text-ink">
                 Payment method
               </legend>
 
               <div className="mt-2 grid gap-2">
-                {depositMethods.map((m) => (
+                {depositMethods.map((item) => (
                   <label
-                    key={m.id}
+                    key={item.id}
                     className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors has-focus-visible:ring-2 has-focus-visible:ring-apex-500/40 ${
-                      m.id === methodId
+                      item.id === methodId
                         ? "border-apex-500 bg-apex-50"
                         : "border-apex-200 hover:bg-apex-50"
                     }`}
@@ -258,17 +241,16 @@ export default function Deposit() {
                     <input
                       type="radio"
                       name="method"
-                      value={m.id}
-                      checked={m.id === methodId}
+                      value={item.id}
+                      checked={item.id === methodId}
                       onChange={() => {
-                        setMethodId(m.id);
+                        setMethodId(item.id);
                         setError("");
                         setDone(false);
                       }}
                       className="accent-apex-600"
                     />
-
-                    {m.label}
+                    {item.label}
                   </label>
                 ))}
               </div>
@@ -288,15 +270,13 @@ export default function Deposit() {
               error={error}
             />
 
-            {/* Sender information comes from the backend. */}
             <div className="rounded-lg border border-apex-200 bg-apex-50 px-4 py-3">
               <p className="text-sm font-medium text-apex-950">
                 Sender information
               </p>
-
               <p className="mt-1 text-sm text-muted">
-                Your account information will automatically be
-                attached to this deposit request.
+                Your account email will automatically be attached to this
+                deposit request.
               </p>
             </div>
 
@@ -315,28 +295,22 @@ export default function Deposit() {
             How to pay with {method.label}
           </h2>
 
-          <p className="mt-1 text-sm text-muted">
-            {method.note}
-          </p>
+          <p className="mt-1 text-sm text-muted">{method.note}</p>
 
           <dl className="mt-5 space-y-4">
-            {method.fields.map((f) => (
+            {method.fields.map((field) => (
               <div
-                key={f.label}
+                key={field.label}
                 className="rounded-lg bg-apex-50 px-4 py-3"
               >
-                <dt className="text-xs text-muted">
-                  {f.label}
-                </dt>
+                <dt className="text-xs text-muted">{field.label}</dt>
 
                 <dd className="mt-0.5 flex items-center justify-between gap-3">
                   <span className="break-all font-semibold text-apex-950">
-                    {f.value}
+                    {field.value}
                   </span>
 
-                  {f.copy && (
-                    <CopyButton value={f.value} />
-                  )}
+                  {field.copy && <CopyButton value={field.value} />}
                 </dd>
               </div>
             ))}
@@ -363,9 +337,7 @@ export default function Deposit() {
 
         {historyError && (
           <div className="mb-3 space-y-2">
-            <p className="text-sm text-red-600">
-              {historyError}
-            </p>
+            <p className="text-sm text-red-600">{historyError}</p>
 
             <button
               type="button"

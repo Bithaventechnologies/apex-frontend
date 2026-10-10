@@ -51,27 +51,36 @@ function getPlanName(investment: Investment): string {
   return `Plan ${planId}`;
 }
 
-function getStartDate(investment: Investment): string | number {
-  return investment.createdAt;
-}
+function getStartDate(investment: Investment): Date | null {
+  const value = investment.createdAt;
 
-function getEndDate(investment: Investment): Date | null {
-  const start = new Date(investment.createdAt);
-
-  if (Number.isNaN(start.getTime())) {
+  if (value === null || value === undefined || value === "") {
     return null;
   }
 
+  const date =
+    typeof value === "number" ||
+    (typeof value === "string" && /^\d+$/.test(value))
+      ? new Date(Number(value))
+      : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getEndDate(investment: Investment): Date | null {
+  const start = getStartDate(investment);
+  const duration = Number(investment.duration);
+
   if (
-    typeof investment.duration !== "number" ||
-    !Number.isFinite(investment.duration) ||
-    investment.duration <= 0
+    !start ||
+    !Number.isFinite(duration) ||
+    duration <= 0
   ) {
     return null;
   }
 
   const end = new Date(start);
-  end.setDate(end.getDate() + investment.duration);
+  end.setDate(end.getDate() + duration);
 
   return end;
 }
@@ -287,7 +296,7 @@ export default function Investments() {
             const amount = getInvestmentAmount(investment);
 
             const now = Date.now();
-            const start = new Date(startDate).getTime();
+        const start = startDate?.getTime() ?? NaN;
             const end = endDate?.getTime() ?? 0;
 
             const hasValidDuration =
