@@ -74,9 +74,23 @@ export type AdminRequest = {
 export type AdminUser = { id: number; uid: string; name: string; email: string; balance: number };
 export type AdminInvestment = { id: string; uid: string; name: string; email: string; planName: string; amount: number; status: string; createdAt: string; endDate: string };
 export type AdminEarning = { id: string; uid: string; name: string; email: string; amount: number; source: string; createdAt: string };
-export type AdminPlan = { id: number; name: string; returns: number; minAmount: number; maxAmount: number; duration: number; createdAt: string };
-export type PlanInput = { name: string; returns: number; minAmount: number; maxAmount: number; duration: number };
+export type AdminPlan = {
+  id: number;
+  name: string;
+  returns: number;
+  minAmount: number;
+  maxAmount: number;
+  duration: number;
+  createdAt: string;
+};
 
+export type PlanInput = {
+  name: string;
+  returns: number;
+  minAmount: number;
+  maxAmount: number;
+  duration: number;
+};
 // ---------- helpers ----------
 type Rec = Record<string, unknown>;
 const str = (v: unknown, fallback = "") => (v === undefined || v === null ? fallback : String(v));
@@ -177,10 +191,23 @@ export const adminApi = {
   earnings: async () => rows(await request("GET", "/admin/earnings/all")).map(toEarning),
 
   plans: async () => rows(await request("GET", "/admin/plans")).map(toPlan),
-  createPlan: async (input: PlanInput) => {
-    const res = await request<{ data?: Rec }>("POST", "/admin/plans", input);
-    return toPlan(res.data ?? {});
-  },
+
+createPlan: async (input: PlanInput) => {
+  const res = await request<{ data?: Rec }>(
+    "POST",
+    "/admin/plans",
+    {
+      name: input.name,
+      returns: String(input.returns),
+      minAmount: String(input.minAmount),
+      maxAmount: String(input.maxAmount),
+      duration: String(input.duration),
+    }
+  );
+
+  return toPlan(res.data ?? {});
+},
+
   deletePlan: (id: number) => request("DELETE", `/admin/plans/${id}`),
 
   login: (input: AdminLoginInput) =>
