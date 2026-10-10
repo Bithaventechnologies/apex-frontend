@@ -9,11 +9,11 @@ export default function Hero() {
           Trade with clear signals and a broker that picks up the phone.
         </h1>
         <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
-          Apex Signal Trade gives you forex, stock and crypto markets in one account, with plain-English trade ideas
+          Trust Signal Trade gives you forex, stock and crypto markets in one account, with plain-English trade ideas
           from our analysts every morning. Start small, learn as you go, and withdraw when you choose.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-4">
-          <Link to="/register" className="rounded-lg bg-apex-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-apex-700">
+          <Link to="/auth/register" className="rounded-lg bg-apex-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-apex-700">
             Open an account
           </Link>
           <a href="#plans" className="rounded-lg border border-apex-200 px-6 py-3 font-semibold text-apex-900 transition-colors hover:bg-apex-50">

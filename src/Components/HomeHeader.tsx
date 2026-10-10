@@ -16,7 +16,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-apex-100 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <a href="#top" aria-label="Apex Signal Trade home">
+        <a href="#top" aria-label="Trust Signal Trade home">
           <Logo />
         </a>
 
@@ -64,10 +64,10 @@ export default function Header() {
             ))}
           </nav>
           <div className="mt-4 flex gap-3">
-            <Link to="/login" className="flex-1 rounded-lg border border-apex-200 py-2.5 text-center text-sm font-semibold text-apex-900">
+            <Link to="/auth/login" className="flex-1 rounded-lg border border-apex-200 py-2.5 text-center text-sm font-semibold text-apex-900">
               Sign in
             </Link>
-            <Link to="/register" className="flex-1 rounded-lg bg-apex-600 py-2.5 text-center text-sm font-semibold text-white">
+            <Link to="/auth/register" className="flex-1 rounded-lg bg-apex-600 py-2.5 text-center text-sm font-semibold text-white">
               Open account
             </Link>
           </div>

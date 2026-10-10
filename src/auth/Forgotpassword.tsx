@@ -28,18 +28,21 @@ export default function ForgotPassword() {
     setError("");
     setLoading(true);
 
-    try {
-      await requestPasswordReset(email.trim());
-      setSent(true);
-    } catch (err) {
-      setFormError(
-        err instanceof AuthError
-          ? err.message
-          : "We couldn't send the email. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
+  
+try {
+  await requestPasswordReset(email.trim());
+
+  // The backend sends a password-reset OTP.
+  setSent(true);
+} catch (err) {
+  setFormError(
+    err instanceof AuthError
+      ? err.message
+      : "We couldn't send the reset code. Please try again."
+  );
+} finally {
+  setLoading(false);
+}
   }
 
   const back = (
@@ -68,14 +71,17 @@ export default function ForgotPassword() {
           role="status"
           className="rounded-xl bg-apex-50 p-5 text-ink"
         >
-          <p>
-            If an account exists for{" "}
-            <strong>{email.trim()}</strong>, we've sent a link
-            to reset your password. The link works for a limited
-            time.
-          </p>
+      <p className="mt-2 text-muted">
+  If an account exists for {email.trim()}, we've sent a password-reset
+  code. Enter that code on the next page to choose a new password.
+</p>
         </div>
-
+<Link
+  to={`/auth/reset-password?email=${encodeURIComponent(email.trim())}`}
+  className="mt-6 block rounded-lg bg-apex-600 py-3 text-center font-semibold text-white hover:bg-apex-700"
+>
+  Enter reset code
+</Link>
         <button
           type="button"
           onClick={() => setSent(false)}

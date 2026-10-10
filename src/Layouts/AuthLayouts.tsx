@@ -12,7 +12,7 @@ export default function AuthLayout({ title, subtitle, footer }: Props) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[0.9fr_1.1fr]">
       <aside className="relative hidden overflow-hidden bg-apex-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <Link to="/" aria-label="Apex Signal Trade home">
+        <Link to="/" aria-label="Trust Signal Trade home">
           <Logo variant="light" />
         </Link>
 
@@ -32,7 +32,7 @@ export default function AuthLayout({ title, subtitle, footer }: Props) {
         <Link
           to="/"
           className="lg:hidden"
-          aria-label="Apex Signal Trade home"
+          aria-label="Trust Signal Trade home"
         >
           <Logo />
         </Link>

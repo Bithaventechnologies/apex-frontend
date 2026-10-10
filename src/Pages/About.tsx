@@ -10,11 +10,11 @@ export default function About() {
   return (
     <section id="about" className="bg-white py-20">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 md:grid-cols-2">
-        <img src={images.about} alt="An Apex Signal Trade account manager smiling at her desk" className="aspect-4/3 w-full rounded-3xl object-cover" />
+        <img src={images.about} alt="An Trust Signal Trade account manager smiling at her desk" className="aspect-4/3 w-full rounded-3xl object-cover" />
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-apex-950 sm:text-4xl">Built by traders who got tired of vague advice</h2>
           <p className="mt-4 text-lg leading-relaxed text-muted">
-            We started Apex Signal Trade because most people were told what to buy but never why. Our team writes every
+            We started Trust Signal Trade because most people were told what to buy but never why. Our team writes every
             trade idea in plain language, so you learn the reasoning while your account grows.
           </p>
           <ul className="mt-8 space-y-5">
