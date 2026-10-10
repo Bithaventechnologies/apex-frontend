@@ -41,7 +41,7 @@ export default function WelcomeModal({ fullName, plan, onContinue }: Props) {
         </div>
 
         <h2 id="welcome-title" className="mt-5 text-2xl font-bold text-apex-950">
-          Welcome to Apex Signal Trade, {firstName}
+          Welcome to Trust Signal Trade, {firstName}
         </h2>
         <p id="welcome-body" className="mt-3 text-muted">
           Your {planNames[plan] ?? "Starter"} account is ready. Fund it when you're ready, and your first signals will appear on your

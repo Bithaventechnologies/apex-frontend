@@ -1,21 +1,20 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
 
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import { Link, useNavigate} from "react-router-dom";
 
 import TextField from "../Components/Textfield";
 import PasswordRules from "../Components/PasswordRules";
 import SubmitButton from "../Components/SubmitButton";
 import FormAlert from "../Components/FormAlert";
-import WelcomeModal from "../Components/WelcomeModal";
 
 import { AuthError, registerUser } from "../lib/auth";
 import { isEmail, isStrongPassword } from "../lib/validation";
 
-const PLANS = [
-  { id: "starter", label: "Starter (from $250)" },
-  { id: "pro", label: "Pro (from $5,000)" },
-  { id: "elite", label: "Elite (from $25,000)" },
-];
+// const PLANS = [
+//   { id: "starter", label: "Starter (from $250)" },
+//   { id: "pro", label: "Pro (from $5,000)" },
+//   { id: "elite", label: "Elite (from $25,000)" },
+// ];
 
 type Values = {
   firstName: string;
@@ -23,52 +22,49 @@ type Values = {
   email: string;
   password: string;
   confirm: string;
-  plan: string;
   terms: boolean;
 };
 
 type Errors = Partial<Record<keyof Values, string>>;
 
-function validate(v: Values): Errors {
-  const e: Errors = {};
+function validate(values: Values): Errors {
+  const errors: Errors = {};
 
-  if (v.firstName.trim().length < 2) {
-    e.firstName = "Enter your first name.";
+  if (values.firstName.trim().length < 2) {
+    errors.firstName = "Enter your first name.";
   }
 
-  if (v.lastName.trim().length < 2) {
-    e.lastName = "Enter your last name.";
+  if (values.lastName.trim().length < 2) {
+    errors.lastName = "Enter your last name.";
   }
 
-  if (!isEmail(v.email)) {
-    e.email = "Enter a valid email address.";
+  if (!isEmail(values.email)) {
+    errors.email = "Enter a valid email address.";
   }
 
-  if (!isStrongPassword(v.password)) {
-    e.password =
-      "Your password doesn't meet all the requirements.";
+  if (!isStrongPassword(values.password)) {
+    errors.password = "Your password doesn't meet all the requirements.";
   }
 
-  if (v.confirm !== v.password) {
-    e.confirm = "Passwords don't match.";
+  if (values.confirm !== values.password) {
+    errors.confirm = "Passwords don't match.";
   }
 
-  if (!v.terms) {
-    e.terms = "Accept the terms to create your account.";
+  if (!values.terms) {
+    errors.terms = "Accept the terms to create your account.";
   }
 
-  return e;
+  return errors;
 }
 
 export default function Register() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  // const [params] = useSearchParams();
 
-  const requested = params.get("plan");
-
-  const initialPlan = PLANS.some((p) => p.id === requested)
-    ? (requested as string)
-    : "starter";
+  // const requestedPlan = params.get("plan");
+  // const initialPlan = PLANS.some((plan) => plan.id === requestedPlan)
+  //   ? requestedPlan!
+  //   : "starter";
 
   const [values, setValues] = useState<Values>({
     firstName: "",
@@ -76,64 +72,64 @@ export default function Register() {
     email: "",
     password: "",
     confirm: "",
-    plan: initialPlan,
+
     terms: false,
   });
 
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [welcomeName, setWelcomeName] = useState<string | null>(null);
 
   function onChange(
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
-    const { name, value, type } = e.target;
+    const { name, value, type } = event.target;
 
-    const next =
+    const nextValue =
       type === "checkbox"
-        ? (e.target as HTMLInputElement).checked
+        ? (event.target as HTMLInputElement).checked
         : value;
 
-    setValues((v) => ({
-      ...v,
-      [name]: next,
+    setValues((previous) => ({
+      ...previous,
+      [name]: nextValue,
     }));
 
-    setErrors((prev) => ({
-      ...prev,
+    setErrors((previous) => ({
+      ...previous,
       [name]: undefined,
     }));
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setFormError("");
 
-    const found = validate(values);
+    const foundErrors = validate(values);
+    setErrors(foundErrors);
 
-    setErrors(found);
-
-    if (Object.keys(found).length) {
-      return;
-    }
+    if (Object.keys(foundErrors).length > 0) return;
 
     setLoading(true);
 
     try {
-      const user = await registerUser({
+      await registerUser({
         fullName: `${values.firstName.trim()} ${values.lastName.trim()}`,
         email: values.email.trim(),
         password: values.password,
-        plan: values.plan,
       });
 
-      setWelcomeName(user.fullName);
-    } catch (err) {
+      // Registration sends the verification OTP to the user's email.
+  
+navigate(
+  `/auth/verify-email?email=${encodeURIComponent(values.email.trim())}`,
+  { replace: true }
+);
+    
+    } catch (error) {
       setFormError(
-        err instanceof AuthError
-          ? err.message
+        error instanceof AuthError
+          ? error.message
           : "We couldn't create your account. Please try again."
       );
     } finally {
@@ -143,43 +139,37 @@ export default function Register() {
 
   return (
     <>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-apex-950">
+          Create your account
+        </h1>
+        <p className="mt-2 text-muted">
+          It takes about two minutes. You choose when to fund it.
+        </p>
+      </div>
 
-    <div className="mb-8">
-  <h1 className="text-3xl font-bold tracking-tight text-apex-950">
-    Create your account
-  </h1>
-
-  <p className="mt-2 text-muted">
-    It takes about two minutes. You choose when to fund it.
-  </p>
-</div>
       <FormAlert message={formError} />
 
-      <form
-        onSubmit={onSubmit}
-        noValidate
-        className="space-y-5"
-      >
-     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-  <TextField
-    label="First name"
-    name="firstName"
-    autoComplete="given-name"
-    value={values.firstName}
-    onChange={onChange}
-    error={errors.firstName}
-  />
+      <form onSubmit={onSubmit} noValidate className="space-y-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <TextField
+            label="First name"
+            name="firstName"
+            autoComplete="given-name"
+            value={values.firstName}
+            onChange={onChange}
+            error={errors.firstName}
+          />
 
-  <TextField
-    label="Last name"
-    name="lastName"
-    autoComplete="family-name"
-    value={values.lastName}
-    onChange={onChange}
-    error={errors.lastName}
-  />
-</div>
-
+          <TextField
+            label="Last name"
+            name="lastName"
+            autoComplete="family-name"
+            value={values.lastName}
+            onChange={onChange}
+            error={errors.lastName}
+          />
+        </div>
 
         <TextField
           label="Email"
@@ -191,8 +181,6 @@ export default function Register() {
           error={errors.email}
         />
 
-      
-
         <div>
           <TextField
             label="Password"
@@ -203,7 +191,6 @@ export default function Register() {
             onChange={onChange}
             error={errors.password}
           />
-
           <PasswordRules value={values.password} />
         </div>
 
@@ -217,6 +204,28 @@ export default function Register() {
           error={errors.confirm}
         />
 
+        {/* <div>
+          <label
+            htmlFor="plan"
+            className="mb-2 block text-sm font-medium text-ink"
+          >
+            Investment plan
+          </label>
+          <select
+            id="plan"
+            name="plan"
+            value={values.plan}
+            onChange={onChange}
+            className="w-full rounded-xl border border-apex-200 bg-white px-4 py-3 text-ink outline-none focus:border-apex-600"
+          >
+            {PLANS.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.label}
+              </option>
+            ))}
+          </select>
+        </div> */}
+
         <div>
           <label className="flex items-start gap-3 text-sm text-ink">
             <input
@@ -227,7 +236,6 @@ export default function Register() {
               aria-invalid={!!errors.terms}
               className="mt-0.5 h-4 w-4 rounded border-apex-200 accent-apex-600"
             />
-
             <span>
               I agree to the{" "}
               <Link
@@ -248,24 +256,18 @@ export default function Register() {
           </label>
 
           {errors.terms && (
-            <p
-              role="alert"
-              className="mt-1.5 text-sm text-red-700"
-            >
+            <p role="alert" className="mt-1.5 text-sm text-red-700">
               {errors.terms}
             </p>
           )}
         </div>
 
-        <SubmitButton
-          loading={loading}
-          loadingText="Creating account…"
-        >
+        <SubmitButton loading={loading} loadingText="Creating account…">
           Create account
         </SubmitButton>
-        
       </form>
-<div className="mt-6 text-center text-sm text-muted">
+
+      <div className="mt-6 text-center text-sm text-muted">
         Already have an account?{" "}
         <Link
           to="/auth/login"
@@ -274,13 +276,6 @@ export default function Register() {
           Log in
         </Link>
       </div>
-      {welcomeName && (
-        <WelcomeModal
-          fullName={welcomeName}
-          plan={values.plan}
-          onContinue={() => navigate("/dashboard")}
-        />
-      )}
     </>
   );
 }

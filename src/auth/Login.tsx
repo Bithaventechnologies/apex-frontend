@@ -12,7 +12,7 @@ type Errors = { email?: string; password?: string };
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/dashboard";
+  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/user/dashboard";
 
   const [values, setValues] = useState({ email: "", password: "", remember: false });
   const [errors, setErrors] = useState<Errors>({});
@@ -25,25 +25,54 @@ export default function Login() {
     setErrors((prev) => ({ ...prev, [name]: undefined }));
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setFormError("");
-    const found: Errors = {};
-    if (!isEmail(values.email)) found.email = "Enter a valid email address.";
-    if (!values.password) found.password = "Enter your password.";
-    setErrors(found);
-    if (Object.keys(found).length) return;
 
-    setLoading(true);
-    try {
-      await loginUser({ email: values.email.trim(), password: values.password, remember: values.remember });
-      navigate(from, { replace: true });
-    } catch (err) {
-      setFormError(err instanceof AuthError ? err.message : "We couldn't sign you in. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+async function onSubmit(e: FormEvent) {
+  e.preventDefault();
+  setFormError("");
+
+  const found: Errors = {};
+
+  if (!isEmail(values.email)) {
+    found.email = "Enter a valid email address.";
   }
+
+  if (!values.password) {
+    found.password = "Enter your password.";
+  }
+
+  setErrors(found);
+
+  if (Object.keys(found).length > 0) return;
+
+  setLoading(true);
+
+  try {
+    await loginUser({
+      email: values.email.trim(),
+      password: values.password,
+      remember: values.remember,
+    });
+
+    navigate(from, { replace: true });
+  } catch (err) {
+    const message =
+      err instanceof AuthError
+        ? err.message
+        : "We couldn't sign you in. Please try again.";
+
+    if (message.toLowerCase().includes("verify your email")) {
+      navigate(
+        `/auth/verify-email?email=${encodeURIComponent(values.email.trim())}`,
+        { replace: true }
+      );
+      return;
+    }
+
+    setFormError(message);
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <>
@@ -70,6 +99,16 @@ export default function Login() {
         </div>
 
         <SubmitButton loading={loading} loadingText="Signing in…">Sign in</SubmitButton>
+
+         <div className="mt-6 text-center text-sm text-muted">
+        Don't have an account?{" "}
+        <Link
+          to="/auth/register"
+          className="font-semibold text-apex-700 underline underline-offset-4 hover:text-apex-600"
+        >
+          Register
+        </Link>
+      </div>
       </form>
     </>
 

@@ -29,8 +29,8 @@ export default function Footer() {
         <nav aria-label="Account">
           <h3 className="font-sans text-sm font-semibold text-white">Account</h3>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link to="/login" className="hover:text-white">Sign in</Link></li>
-            <li><Link to="/register" className="hover:text-white">Open account</Link></li>
+            <li><Link to="/auth/login" className="hover:text-white">Sign in</Link></li>
+            <li><Link to="/auth/register" className="hover:text-white">Open account</Link></li>
           </ul>
         </nav>
       </div>
@@ -38,7 +38,7 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl space-y-3 px-5 py-6 text-xs leading-relaxed text-apex-200/80">
         
-          <p>© {new Date().getFullYear()} Apex Signal Trade. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Trust Signal Trade. All rights reserved.</p>
         </div>
       </div>
     </footer>

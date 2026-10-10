@@ -66,7 +66,7 @@ export default function Plans() {
               </ul>
 
               <Link
-                to={`/register?plan=${plan.id}`}
+                to={`/auth/register`}
                 className={`mt-8 rounded-lg py-3 text-center font-semibold transition-colors ${
                   f ? "bg-white text-apex-900 hover:bg-apex-100" : "bg-apex-600 text-white hover:bg-apex-700"
                 }`}

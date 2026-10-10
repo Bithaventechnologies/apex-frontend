@@ -14,7 +14,7 @@ export default function Logo({ variant = "dark", className = "" }: Props) {
         <path d="M13.5 24.5h4l2.5-5 2.6 7.5 2-2.5h2.4" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span className="flex flex-col leading-none">
-        <span className={`font-display text-lg font-extrabold tracking-tight ${text}`}>Apex</span>
+        <span className={`font-display text-lg font-extrabold tracking-tight ${text}`}>Trust</span>
         <span className={`text-[11px] font-semibold tracking-wide ${sub}`}>Signal Trade</span>
       </span>
     </span>
