@@ -1,6 +1,6 @@
 
 import axios from "axios";
-import { api, apiErrorMessage } from "./api";
+import { api, apiErrorMessage, unwrapData } from "./api";
 export { api } from "./api";
 
 // -------------------- TYPES --------------------
@@ -181,34 +181,42 @@ async function get<T>(path: string): Promise<T> {
 
 // -------------------- REGISTER --------------------
 
-export async function registerUser(input: {
-  fullName: string;
+
+export type RegisterPayload = {
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
-}): Promise<User> {
-  const names = input.fullName.trim().split(/\s+/);
-  const firstName = names.shift() ?? "";
-  const lastName = names.join(" ");
+};
 
-  const response = await post<ApiResponse<BackendUser>>(
-    "/auth/register",
-    {
-      firstName,
-      lastName,
-      email: input.email.trim().toLowerCase(),
-      password: input.password,
+export async function registerUser(payload: RegisterPayload) {
+  try {
+    const response = await api.post("/auth/register", {
+      firstName: payload.firstName.trim(),
+      lastName: payload.lastName.trim(),
+      email: payload.email.trim().toLowerCase(),
+      password: payload.password,
+    });
+
+    return unwrapData(response);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      throw error;
     }
-  );
 
-  if (!response.user) {
+    if (axios.isAxiosError(error)) {
+      throw new AuthError(
+        error.response?.data?.message ||
+          "We couldn't create your account. Please try again."
+      );
+    }
+
     throw new AuthError(
-      response.message ??
-        "Registration response is missing user data."
+      "We couldn't create your account. Please try again."
     );
   }
-
-  return toUser(response.user);
 }
+
 
 // -------------------- LOGIN --------------------
 

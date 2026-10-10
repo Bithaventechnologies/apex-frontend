@@ -113,16 +113,17 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await registerUser({
-        fullName: `${values.firstName.trim()} ${values.lastName.trim()}`,
-        email: values.email.trim(),
-        password: values.password,
-      });
+   await registerUser({
+  firstName: values.firstName.trim(),
+  lastName: values.lastName.trim(),
+  email: values.email.trim(),
+  password: values.password,
+});
 
-      // Registration sends the verification OTP to the user's email.
-  
 navigate(
-  `/auth/verify-email?email=${encodeURIComponent(values.email.trim())}`,
+  `/auth/verify-email?email=${encodeURIComponent(
+    values.email.trim()
+  )}`,
   { replace: true }
 );
     
