@@ -17,8 +17,10 @@ export type Plan = {
 type List = { data: Plan[] };
 type One = { data: Plan };
 
-export async function getPlans(): Promise<Plan[]> {
+export async function getPlans(signal: AbortSignal): Promise<Plan[]> {
   const response = await api.get("/plans/all");
+
+  console.log(signal)
 
   return unwrapData<List>(response.data as List).data;
 }

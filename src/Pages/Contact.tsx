@@ -32,8 +32,8 @@ export default function Contact() {
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Talk to someone on the team</h2>
           <p className="mt-3 max-w-md text-apex-200">Ask about plans, funding or how signals work. We reply within one business day.</p>
           <dl className="mt-8 space-y-5 text-sm">
-            <div><dt className="text-gold-400">Email</dt><dd className="text-base font-semibold">support@apexsignaltrade.com</dd></div>
-            <div><dt className="text-gold-400">Phone</dt><dd className="text-base font-semibold">+234 000 000 0000</dd></div>
+            <div><dt className="text-gold-400">Email</dt><dd className="text-base font-semibold">trustsignaltrade@gmail.com</dd></div>
+            <div><dt className="text-gold-400">Phone</dt><dd className="text-base font-semibold">+1 (814) 619-1621</dd></div>
             <div><dt className="text-gold-400">Hours</dt><dd className="text-base font-semibold">Mon–Fri, 8am–6pm WAT</dd></div>
           </dl>
         </div>
