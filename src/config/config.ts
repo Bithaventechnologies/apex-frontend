@@ -8,6 +8,7 @@ export const adminNav: NavItem[] = [
   { to: "/admin", label: "Overview", end: true, icon: "M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10" },
   { to: "/admin/deposits", label: "All deposits", end: true, group: "Deposits", icon: "M12 4v12m0 0l-4-4m4 4l4-4M5 20h14" },
   { to: "/admin/deposits/pending", label: "Pending deposits", group: "Deposits", icon: "M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  { to: "/admin/gateways", label: "Gateways", group: "Deposits", icon: "M3 8a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8zM16 13h2M3 10h18" },
   { to: "/admin/withdrawals", label: "All withdrawals", end: true, group: "Withdrawals", icon: "M12 20V8m0 0l-4 4m4-4l4 4M5 4h14" },
   { to: "/admin/withdrawals/pending", label: "Pending withdrawals", group: "Withdrawals", icon: "M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   { to: "/admin/investments", label: "Investments", group: "Platform", icon: "M4 18l5-6 4 3 7-9M15 6h5v5" },
