@@ -26,6 +26,7 @@ import AdminInvestments from "../Admin/adminInvestement";
 import AdminEarnings from "../Admin/adminEarnings";
 import AdminPlans from "../Admin/AdminPlans";
 import AdminLogin from "../auth/adminLogin";
+import AdminGateways from "../Admin/AdminGateway";
 
 
 
@@ -140,6 +141,10 @@ export const router = createBrowserRouter([
             {
                 path: "plans", 
                 element: <AdminPlans/>
+            }, 
+            {
+                path: "gateways", 
+                element: <AdminGateways/>
             }
         ]
     }, 

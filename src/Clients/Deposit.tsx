@@ -3,7 +3,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import TextField from "../Components/Textfield";
 import SubmitButton from "../Components/SubmitButton";
-import { depositMethods } from "../data/paymentmethod";
 import { money } from "../lib/format";
 import { getProfile } from "../lib/auth";
 import type { Transaction } from "../types/planType";
@@ -19,8 +18,16 @@ import {
   createDeposit,
   type Deposit as DepositType,
 } from "../lib/deposits";
+import { getActiveGateways, type Gateway } from "../lib/gateways";
 
 const MIN_DEPOSIT = 250;
+
+// The deposits API currently accepts these currencies only.
+const SUPPORTED_CURRENCIES = ["BTC", "SOL", "ETH"] as const;
+type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+
+const isSupported = (currency: string): currency is SupportedCurrency =>
+  (SUPPORTED_CURRENCIES as readonly string[]).includes(currency);
 
 type DepositHistoryItem = {
   id: string;
@@ -114,7 +121,12 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function Deposit() {
-  const [methodId, setMethodId] = useState(depositMethods[0].id);
+  // Payment gateways (wallets the admin has made active)
+  const [gateways, setGateways] = useState<Gateway[]>([]);
+  const [gatewayId, setGatewayId] = useState("");
+  const [loadingGateways, setLoadingGateways] = useState(true);
+  const [gatewayError, setGatewayError] = useState("");
+
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -123,9 +135,27 @@ export default function Deposit() {
   const [submitting, setSubmitting] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
-  const method =
-    depositMethods.find((item) => item.id === methodId) ??
-    depositMethods[0];
+  const gateway = gateways.find((g) => String(g.id) === gatewayId) ?? null;
+
+  async function loadGateways() {
+    setLoadingGateways(true);
+    setGatewayError("");
+
+    try {
+      const list = await getActiveGateways();
+      setGateways(list);
+      setGatewayId((current) =>
+        list.some((g) => String(g.id) === current)
+          ? current
+          : String(list[0]?.id ?? "")
+      );
+    } catch (err) {
+      console.error("Failed to fetch gateways:", err);
+      setGatewayError(getErrorMessage(err));
+    } finally {
+      setLoadingGateways(false);
+    }
+  }
 
   async function loadDeposits() {
     setLoadingHistory(true);
@@ -143,11 +173,17 @@ export default function Deposit() {
   }
 
   useEffect(() => {
+    void loadGateways();
     void loadDeposits();
   }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!gateway) {
+      setError("Choose a payment method first.");
+      return;
+    }
 
     const n = Number(amount);
 
@@ -156,11 +192,10 @@ export default function Deposit() {
       return;
     }
 
-    const selectedMethod = String(method.id).toUpperCase();
-
-    if (!["BTC", "SOL", "ETH"].includes(selectedMethod)) {
+    // The deposit API takes the currency (BTC / SOL / ETH), not the gateway id.
+    if (!isSupported(gateway.currency)) {
       setError(
-        "This payment method is not supported by the deposit API. Select BTC, SOL, or ETH."
+        `${gateway.currency} deposits aren't available yet. Choose BTC, ETH or SOL.`
       );
       return;
     }
@@ -187,7 +222,7 @@ export default function Deposit() {
 
       await createDeposit({
         amount: n,
-        method: selectedMethod as "BTC" | "SOL" | "ETH",
+        method: gateway.currency,
         from,
       });
 
@@ -222,99 +257,145 @@ export default function Deposit() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* DEPOSIT FORM */}
         <Card>
-          <form onSubmit={onSubmit} noValidate className="space-y-6">
-            <fieldset>
-              <legend className="text-sm font-medium text-ink">
-                Payment method
-              </legend>
-
-              <div className="mt-2 grid gap-2">
-                {depositMethods.map((item) => (
-                  <label
-                    key={item.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors has-focus-visible:ring-2 has-focus-visible:ring-apex-500/40 ${
-                      item.id === methodId
-                        ? "border-apex-500 bg-apex-50"
-                        : "border-apex-200 hover:bg-apex-50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="method"
-                      value={item.id}
-                      checked={item.id === methodId}
-                      onChange={() => {
-                        setMethodId(item.id);
-                        setError("");
-                        setDone(false);
-                      }}
-                      className="accent-apex-600"
-                    />
-                    {item.label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <TextField
-              label={`Amount (USD, minimum ${money(MIN_DEPOSIT)})`}
-              name="amount"
-              inputMode="decimal"
-              placeholder="500"
-              value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
-                setError("");
-                setDone(false);
-              }}
-              error={error}
-            />
-
-            <div className="rounded-lg border border-apex-200 bg-apex-50 px-4 py-3">
-              <p className="text-sm font-medium text-apex-950">
-                Sender information
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                Your account email will automatically be attached to this
-                deposit request.
-              </p>
+          {loadingGateways ? (
+            <p className="py-6 text-center text-sm text-muted">
+              Loading payment methods...
+            </p>
+          ) : gatewayError ? (
+            <div className="space-y-2 py-4">
+              <p className="text-sm text-red-600">{gatewayError}</p>
+              <button
+                type="button"
+                onClick={() => void loadGateways()}
+                className="text-sm font-medium text-apex-700 hover:underline"
+              >
+                Try again
+              </button>
             </div>
+          ) : gateways.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">
+              No payment methods are available right now. Please check back
+              soon or contact support.
+            </p>
+          ) : (
+            <form onSubmit={onSubmit} noValidate className="space-y-6">
+              <fieldset>
+                <legend className="text-sm font-medium text-ink">
+                  Payment method
+                </legend>
 
-            <SubmitButton
-              loading={submitting}
-              loadingText="Submitting deposit..."
-            >
-              I've made this payment
-            </SubmitButton>
-          </form>
+                <div className="mt-2 grid gap-2">
+                  {gateways.map((item) => (
+                    <label
+                      key={item.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors has-focus-visible:ring-2 has-focus-visible:ring-apex-500/40 ${
+                        String(item.id) === gatewayId
+                          ? "border-apex-500 bg-apex-50"
+                          : "border-apex-200 hover:bg-apex-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="method"
+                        value={item.id}
+                        checked={String(item.id) === gatewayId}
+                        onChange={() => {
+                          setGatewayId(String(item.id));
+                          setError("");
+                          setDone(false);
+                        }}
+                        className="accent-apex-600"
+                      />
+                      <span>
+                        {item.name}
+                        <span className="ml-2 font-normal text-muted">
+                          {item.currency} · {item.network}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <TextField
+                label={`Amount (USD, minimum ${money(MIN_DEPOSIT)})`}
+                name="amount"
+                inputMode="decimal"
+                placeholder="500"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setError("");
+                  setDone(false);
+                }}
+                error={error}
+              />
+
+              <div className="rounded-lg border border-apex-200 bg-apex-50 px-4 py-3">
+                <p className="text-sm font-medium text-apex-950">
+                  Sender information
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  Your account email will automatically be attached to this
+                  deposit request.
+                </p>
+              </div>
+
+              <SubmitButton
+                loading={submitting}
+                loadingText="Submitting deposit..."
+              >
+                I've made this payment
+              </SubmitButton>
+            </form>
+          )}
         </Card>
 
-        {/* PAYMENT INSTRUCTIONS */}
+        {/* PAYMENT INSTRUCTIONS (from the selected gateway) */}
         <Card>
-          <h2 className="text-lg font-bold text-apex-950">
-            How to pay with {method.label}
-          </h2>
+          {gateway ? (
+            <>
+              <h2 className="text-lg font-bold text-apex-950">
+                How to pay with {gateway.name}
+              </h2>
 
-          <p className="mt-1 text-sm text-muted">{method.note}</p>
+              <p className="mt-1 text-sm text-muted">
+                {gateway.instructions ||
+                  `Send only ${gateway.currency} on the ${gateway.network} network. Other coins or networks will be lost.`}
+              </p>
 
-          <dl className="mt-5 space-y-4">
-            {method.fields.map((field) => (
-              <div
-                key={field.label}
-                className="rounded-lg bg-apex-50 px-4 py-3"
-              >
-                <dt className="text-xs text-muted">{field.label}</dt>
+              <dl className="mt-5 space-y-4">
+                <div className="rounded-lg bg-apex-50 px-4 py-3">
+                  <dt className="text-xs text-muted">Currency and network</dt>
+                  <dd className="mt-0.5 font-semibold text-apex-950">
+                    {gateway.currency} · {gateway.network}
+                  </dd>
+                </div>
 
-                <dd className="mt-0.5 flex items-center justify-between gap-3">
-                  <span className="break-all font-semibold text-apex-950">
-                    {field.value}
-                  </span>
+                <div className="rounded-lg bg-apex-50 px-4 py-3">
+                  <dt className="text-xs text-muted">Wallet address</dt>
+                  <dd className="mt-0.5 flex items-center justify-between gap-3">
+                    <span className="break-all font-semibold text-apex-950">
+                      {gateway.address}
+                    </span>
+                    <CopyButton value={gateway.address} />
+                  </dd>
+                </div>
+              </dl>
 
-                  {field.copy && <CopyButton value={field.value} />}
-                </dd>
-              </div>
-            ))}
-          </dl>
+              {gateway.qrCode && (
+                <img
+                  src={gateway.qrCode}
+                  alt={`${gateway.currency} wallet QR code`}
+                  className="mx-auto mt-5 h-44 w-44 rounded-lg border border-apex-100 object-contain"
+                />
+              )}
+            </>
+          ) : (
+            <p className="py-6 text-center text-sm text-muted">
+              Payment instructions will appear here once a method is available.
+            </p>
+          )}
         </Card>
       </div>
 

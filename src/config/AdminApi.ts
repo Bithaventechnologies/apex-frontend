@@ -18,53 +18,30 @@ export class ApiError extends Error {
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("AdminToken");
-
-  return token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-
-async function request<T>(
-  method: string,
-  path: string,
-  body?: unknown
-): Promise<T> {
-  if (!API) {
-    throw new ApiError("VITE_API_URL is not set.");
-  }
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (!API) throw new ApiError("VITE_API_URL is not set.");
 
   let res: Response;
-
   try {
     res = await fetch(`${API.replace(/\/+$/, "")}${path}`, {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...authHeaders(),
-      },
+      headers: { "Content-Type": "application/json", Accept: "application/json", ...authHeaders() },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(
-      "Cannot reach the server. Check the backend URL and CORS configuration."
-    );
+    throw new ApiError("Cannot reach the server. Check the backend URL and CORS configuration.");
   }
 
   const data: unknown = await res.json().catch(() => ({}));
-
   if (!res.ok) {
     const message = (data as { message?: string }).message;
-    throw new ApiError(
-      message ?? `Request failed (${res.status}).`,
-      res.status
-    );
+    throw new ApiError(message ?? `Request failed (${res.status}).`, res.status);
   }
-
   return data as T;
 }
-
 
 // ---------- types ----------
 export type AdminRequest = {
@@ -74,23 +51,23 @@ export type AdminRequest = {
 export type AdminUser = { id: number; uid: string; name: string; email: string; balance: number };
 export type AdminInvestment = { id: string; uid: string; name: string; email: string; planName: string; amount: number; status: string; createdAt: string; endDate: string };
 export type AdminEarning = { id: string; uid: string; name: string; email: string; amount: number; source: string; createdAt: string };
-export type AdminPlan = {
-  id: number;
-  name: string;
-  returns: number;
-  minAmount: number;
-  maxAmount: number;
-  duration: number;
-  createdAt: string;
+export type AdminPlan = { id: number; name: string; returns: number; minAmount: number; maxAmount: number; duration: number; createdAt: string };
+export type AdminGateway = {
+  id: number; name: string; currency: string; network: string; address: string;
+  qrCode: string; instructions: string; isActive: boolean; createdAt: string;
+};
+export type GatewayInput = {
+  name: string; currency: string; network: string; address: string;
+  qrCode?: string; instructions?: string; isActive?: boolean;
+};
+export type AdminLoginInput = { email: string; password: string };
+export type AdminLoginResponse = {
+  success: boolean; message: string; token: string;
+  admin: { id: number; uid: string; name: string; username: string; email: string; type: string };
 };
 
-export type PlanInput = {
-  name: string;
-  returns: number;
-  minAmount: number;
-  maxAmount: number;
-  duration: number;
-};
+export type PlanInput = { name: string; returns: number; minAmount: number; maxAmount: number; duration: number };
+
 // ---------- helpers ----------
 type Rec = Record<string, unknown>;
 const str = (v: unknown, fallback = "") => (v === undefined || v === null ? fallback : String(v));
@@ -159,24 +136,12 @@ function toPlan(r: Rec): AdminPlan {
   };
 }
 
-export type AdminLoginInput = {
-  email: string;
-  password: string;
-};
-
-export type AdminLoginResponse = {
-  success: boolean;
-  message: string;
-  token: string;
-  admin: {
-    id: number;
-    uid: string;
-    name: string;
-    username: string;
-    email: string;
-    type: string;
+function toGateway(r: Rec): AdminGateway {
+  return {
+    id: num(r.id), name: str(r.name), currency: str(r.currency), network: str(r.network), address: str(r.address),
+    qrCode: str(r.qrCode), instructions: str(r.instructions), isActive: r.isActive === true, createdAt: when(r.createdAt),
   };
-};
+}
 
 // ---------- endpoints ----------
 export const adminApi = {
@@ -191,29 +156,30 @@ export const adminApi = {
   earnings: async () => rows(await request("GET", "/admin/earnings/all")).map(toEarning),
 
   plans: async () => rows(await request("GET", "/admin/plans")).map(toPlan),
-
-createPlan: async (input: PlanInput) => {
-  const res = await request<{ data?: Rec }>(
-    "POST",
-    "/admin/plans",
-    {
+  createPlan: async (input: PlanInput) => {
+    const res = await request<{ data?: Rec }>("POST", "/admin/plans", {
       name: input.name,
       returns: String(input.returns),
       minAmount: String(input.minAmount),
       maxAmount: String(input.maxAmount),
       duration: String(input.duration),
-    }
-  );
-
-  return toPlan(res.data ?? {});
-},
-
+    });
+    return toPlan(res.data ?? {});
+  },
   deletePlan: (id: number) => request("DELETE", `/admin/plans/${id}`),
 
-  login: (input: AdminLoginInput) =>
-  request<AdminLoginResponse>(
-    "POST",
-    "/admin/auth/login",
-    input
-  ),
+  // Deposit gateways: routes mounted at /api/gateway
+  gateways: async () => rows(await request("GET", "/gateway/admin")).map(toGateway),
+  createGateway: async (input: GatewayInput) => {
+    const res = await request<{ data?: Rec }>("POST", "/gateway/admin", input);
+    return toGateway(res.data ?? {});
+  },
+  updateGateway: async (id: number, input: Partial<GatewayInput>) => {
+    const res = await request<{ data?: Rec }>("PATCH", `/gateway/admin/${id}`, input);
+    return toGateway(res.data ?? {});
+  },
+  setGatewayStatus: (id: number, isActive: boolean) => request("PATCH", `/gateway/admin/${id}/status`, { isActive }),
+  deleteGateway: (id: number) => request("DELETE", `/gateway/admin/${id}`),
+
+  login: (input: AdminLoginInput) => request<AdminLoginResponse>("POST", "/admin/auth/login", input),
 };
