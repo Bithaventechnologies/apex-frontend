@@ -19,6 +19,8 @@ const defaultNav: NavItem[] = [
     end: true,
     icon: "M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10",
   },
+
+
   {
     to: "/dashboard/deposit",
     label: "Deposit",
