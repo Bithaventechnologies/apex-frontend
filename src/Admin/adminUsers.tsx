@@ -1,24 +1,50 @@
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useFetch } from "../Hooks/usefetch"; // adjust path to your useFetch
-import { adminApi } from "../config/AdminApi"; // adjust path to your admin API client
-import type { AdminUser } from "../config/AdminApi";
+import { useFetch } from "../Hooks/usefetch";
+import { adminApi } from "../config/AdminApi";
+import type {
+  AdminUser,
+  BalanceAction,
+  CryptoCurrency,
+} from "../config/AdminApi";
 
 const CURRENCY = "USD";
 
 const money = (v: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY }).format(v);
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: CURRENCY,
+  }).format(v);
+
+const cryptoAmount = (v: number) =>
+  v.toLocaleString("en-US", {
+    maximumFractionDigits: 8,
+  });
 
 const joined = (iso: string) =>
-  iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "-";
+  iso
+    ? new Date(iso).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "-";
 
-const label = (u: AdminUser) => u.name.trim() || u.username || u.email;
+const label = (u: AdminUser) =>
+  u.name.trim() || u.username || u.email;
+
 const isAdmin = (u: AdminUser) => u.type === "admin";
 
-type Action = { kind: "topup" | "delete"; user: AdminUser } | null;
+type Action =
+  | { kind: "adjust"; user: AdminUser }
+  | { kind: "delete"; user: AdminUser }
+  | null;
 
 export default function AdminUsers() {
-  const { data, error, loading, reload } = useFetch<AdminUser[]>(() => adminApi.users());
+  const { data, error, loading, reload } =
+    useFetch<AdminUser[]>(() => adminApi.users());
+
   const [query, setQuery] = useState("");
   const [action, setAction] = useState<Action>(null);
   const [notice, setNotice] = useState("");
@@ -26,7 +52,9 @@ export default function AdminUsers() {
   const users = useMemo(() => {
     const q = query.trim().toLowerCase();
     const all = data ?? [];
+
     if (!q) return all;
+
     return all.filter(
       (u) =>
         u.name.toLowerCase().includes(q) ||
@@ -38,11 +66,13 @@ export default function AdminUsers() {
 
   useEffect(() => {
     if (!notice) return;
+
     const t = setTimeout(() => setNotice(""), 4500);
     return () => clearTimeout(t);
   }, [notice]);
 
   const close = () => setAction(null);
+
   const done = (msg: string) => {
     setAction(null);
     setNotice(msg);
@@ -53,11 +83,16 @@ export default function AdminUsers() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Users</h1>
+          <h1 className="text-xl font-semibold text-slate-900">
+            Users
+          </h1>
           <p className="text-sm text-slate-500">
-            {loading ? "Loading users..." : `${users.length} of ${data?.length ?? 0} users`}
+            {loading
+              ? "Loading users..."
+              : `${users.length} of ${data?.length ?? 0} users`}
           </p>
         </div>
+
         <input
           type="search"
           value={query}
@@ -68,39 +103,47 @@ export default function AdminUsers() {
         />
       </div>
 
-      <div aria-live="polite">
-        {notice && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
-            {notice}
-          </div>
-        )}
-      </div>
+      {notice && (
+        <div
+          aria-live="polite"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800"
+        >
+          {notice}
+        </div>
+      )}
 
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           <span>{error}</span>
-          <button onClick={reload} className="font-medium underline underline-offset-2">
+          <button
+            onClick={reload}
+            className="font-medium underline underline-offset-2"
+          >
             Try again
           </button>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-205 text-left text-sm">
+          <table className="w-full min-w-262.5 text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">User</th>
-                <th className="px-4 py-3 font-medium">Balance</th>
+                <th className="px-4 py-3 font-medium">USD Balance</th>
+                <th className="px-4 py-3 font-medium">BTC</th>
+                <th className="px-4 py-3 font-medium">SOL</th>
+                <th className="px-4 py-3 font-medium">ETH</th>
                 <th className="px-4 py-3 font-medium">Invested</th>
                 <th className="px-4 py-3 font-medium">Joined</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {loading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={6} className="px-4 py-4">
+                    <td colSpan={9} className="px-4 py-4">
                       <div className="h-4 w-full animate-pulse rounded bg-slate-100" />
                     </td>
                   </tr>
@@ -108,8 +151,13 @@ export default function AdminUsers() {
 
               {!loading && users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
-                    {query ? `No users match "${query}".` : "No users have registered yet."}
+                  <td
+                    colSpan={9}
+                    className="px-4 py-10 text-center text-slate-500"
+                  >
+                    {query
+                      ? `No users match "${query}".`
+                      : "No users have registered yet."}
                   </td>
                 </tr>
               )}
@@ -118,26 +166,58 @@ export default function AdminUsers() {
                 users.map((u) => (
                   <tr key={u.uid} className="hover:bg-slate-50/70">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{label(u)}</div>
-                      <div className="text-xs text-slate-500">{u.email}</div>
+                      <div className="font-medium text-slate-900">
+                        {label(u)}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {u.email}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 font-medium tabular-nums text-slate-900">{money(u.balance)}</td>
-                    <td className="px-4 py-3 tabular-nums text-slate-600">{money(u.activeInvestments)}</td>
-                    <td className="px-4 py-3 text-slate-600">{joined(u.createdAt)}</td>
+
+                    <td className="px-4 py-3 font-medium tabular-nums text-slate-900">
+                      {money(u.balance)}
+                    </td>
+
+                    <td className="px-4 py-3 tabular-nums">
+                      {cryptoAmount(u.bitcoin)}
+                    </td>
+
+                    <td className="px-4 py-3 tabular-nums">
+                      {cryptoAmount(u.sol)}
+                    </td>
+
+                    <td className="px-4 py-3 tabular-nums">
+                      {cryptoAmount(u.ethereum)}
+                    </td>
+
+                    <td className="px-4 py-3 tabular-nums text-slate-600">
+                      {money(u.activeInvestments)}
+                    </td>
+
+                    <td className="px-4 py-3 text-slate-600">
+                      {joined(u.createdAt)}
+                    </td>
+
                     <td className="px-4 py-3">
                       <StatusBadge user={u} />
                     </td>
+
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => setAction({ kind: "topup", user: u })}
+                          onClick={() =>
+                            setAction({ kind: "adjust", user: u })
+                          }
                           className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                         >
-                          Top up
+                          Manage funds
                         </button>
+
                         {!isAdmin(u) && (
                           <button
-                            onClick={() => setAction({ kind: "delete", user: u })}
+                            onClick={() =>
+                              setAction({ kind: "delete", user: u })
+                            }
                             className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
                           >
                             Delete
@@ -152,24 +232,46 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {action?.kind === "topup" && <TopUpModal user={action.user} onClose={close} onDone={done} />}
-      {action?.kind === "delete" && <DeleteModal user={action.user} onClose={close} onDone={done} />}
+      {action?.kind === "adjust" && (
+        <AdjustBalanceModal
+          user={action.user}
+          onClose={close}
+          onDone={done}
+        />
+      )}
+
+      {action?.kind === "delete" && (
+        <DeleteModal
+          user={action.user}
+          onClose={close}
+          onDone={done}
+        />
+      )}
     </div>
   );
 }
 
 function StatusBadge({ user }: { user: AdminUser }) {
   if (isAdmin(user)) {
-    return <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Admin</span>;
+    return (
+      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+        Admin
+      </span>
+    );
   }
+
   return user.verified ? (
-    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Verified</span>
+    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+      Verified
+    </span>
   ) : (
-    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">Unverified</span>
+    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+      Unverified
+    </span>
   );
 }
 
-/* ---------- shared modal shell ---------- */
+/* ---------------- Modal shell ---------------- */
 
 function Modal({
   titleId,
@@ -185,7 +287,10 @@ function Modal({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !busy && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onClose();
+    };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [busy, onClose]);
@@ -193,7 +298,9 @@ function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
-      onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !busy) onClose();
+      }}
     >
       <form
         onSubmit={onSubmit}
@@ -208,9 +315,9 @@ function Modal({
   );
 }
 
-/* ---------- top up ---------- */
+/* ---------------- Add / deduct crypto ---------------- */
 
-function TopUpModal({
+function AdjustBalanceModal({
   user,
   onClose,
   onDone,
@@ -219,68 +326,214 @@ function TopUpModal({
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
+  const [balanceAction, setBalanceAction] =
+    useState<BalanceAction>("add");
+
+  const [currency, setCurrency] =
+    useState<CryptoCurrency>("BTC");
+
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const ref = useRef<HTMLInputElement>(null);
 
-  useEffect(() => ref.current?.focus(), []);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // matches the server rule: positive, at most 2 decimal places
-  const valid = /^\d+(\.\d{1,2})?$/.test(amount.trim()) && Number(amount) > 0;
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const balances: Record<CryptoCurrency, number> = {
+    BTC: user.bitcoin,
+    SOL: user.sol,
+    ETH: user.ethereum,
+  };
+
+  const currentBalance = balances[currency];
+
+  const valid =
+    /^\d+(\.\d{1,8})?$/.test(amount.trim()) &&
+    Number.isFinite(Number(amount)) &&
+    Number(amount) > 0;
+
   const value = Number(amount);
+
+  const insufficient =
+    balanceAction === "deduct" &&
+    valid &&
+    value > currentBalance;
+
+  const previewBalance =
+    balanceAction === "add"
+      ? currentBalance + value
+      : currentBalance - value;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    setError("");
+
     if (!valid) {
-      setError("Enter an amount greater than 0 with at most 2 decimal places.");
+      setError(
+        "Enter a positive amount with no more than 8 decimal places.",
+      );
       return;
     }
+
+    if (balanceAction === "deduct" && value > currentBalance) {
+      setError("The deduction cannot exceed the user's available balance.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `${balanceAction === "add" ? "Add" : "Deduct"} ${cryptoAmount(value)} ${currency} ${
+        balanceAction === "add" ? "to" : "from"
+      } ${label(user)}'s account?`,
+    );
+
+    if (!confirmed) return;
+
     setBusy(true);
-    setError("");
+
     try {
-      const { newBalance } = await adminApi.topUpUser(user.uid, value);
-      onDone(`Added ${money(value)} to ${label(user)}. New balance: ${money(newBalance)}.`);
+      const result = await adminApi.adjustUserBalance(user.uid, {
+        action: balanceAction,
+        currency,
+        amount: value,
+      });
+
+      const adjustment = result.adjustment;
+
+      const finalBalance =
+        adjustment?.newBalance ?? previewBalance;
+
+      onDone(
+        `${currency} ${balanceAction === "add" ? "added to" : "deducted from"} ${label(user)}'s account. New ${currency} balance: ${cryptoAmount(finalBalance)}.`,
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Top-up failed. Try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to adjust the user's balance.",
+      );
       setBusy(false);
     }
   }
 
   return (
-    <Modal titleId="topup-title" busy={busy} onClose={onClose} onSubmit={submit}>
+    <Modal
+      titleId="adjust-balance-title"
+      busy={busy}
+      onClose={onClose}
+      onSubmit={submit}
+    >
       <div>
-        <h2 id="topup-title" className="text-lg font-semibold text-slate-900">
-          Top up account
+        <h2
+          id="adjust-balance-title"
+          className="text-lg font-semibold text-slate-900"
+        >
+          Manage crypto balance
         </h2>
+
         <p className="text-sm text-slate-500">
-          {label(user)} &middot; current balance {money(user.balance)}
+          {label(user)} · {user.email}
         </p>
       </div>
 
       <div>
-        <label htmlFor="topup-amount" className="mb-1 block text-sm font-medium text-slate-700">
-          Amount ({CURRENCY})
+        <label
+          htmlFor="balance-action"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Action
         </label>
+
+        <select
+          id="balance-action"
+          value={balanceAction}
+          onChange={(e) =>
+            setBalanceAction(e.target.value as BalanceAction)
+          }
+          disabled={busy}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600"
+        >
+          <option value="add">Add funds</option>
+          <option value="deduct">Deduct funds</option>
+        </select>
+      </div>
+
+      <div>
+        <label
+          htmlFor="balance-currency"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Cryptocurrency
+        </label>
+
+        <select
+          id="balance-currency"
+          value={currency}
+          onChange={(e) =>
+            setCurrency(e.target.value as CryptoCurrency)
+          }
+          disabled={busy}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600"
+        >
+          <option value="BTC">Bitcoin (BTC)</option>
+          <option value="SOL">Solana (SOL)</option>
+          <option value="ETH">Ethereum (ETH)</option>
+        </select>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs text-slate-500">
+          Current {currency} balance
+        </p>
+        <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
+          {cryptoAmount(currentBalance)} {currency}
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="crypto-amount"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Amount ({currency})
+        </label>
+
         <input
-          id="topup-amount"
-          ref={ref}
+          id="crypto-amount"
+          ref={inputRef}
+          type="text"
           inputMode="decimal"
+          autoComplete="off"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
+          placeholder="0.00000000"
+          disabled={busy}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
         />
-        {valid && (
+
+        {valid && !insufficient && (
           <p className="mt-1.5 text-xs text-slate-500">
-            New balance will be{" "}
-            <span className="font-medium text-slate-800">{money(user.balance + value)}</span>
+            Estimated balance after adjustment:{" "}
+            <span className="font-medium text-slate-800">
+              {cryptoAmount(previewBalance)} {currency}
+            </span>
           </p>
         )}
       </div>
 
+      {insufficient && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          The amount exceeds the available {currency} balance.
+        </p>
+      )}
+
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </p>
       )}
@@ -294,19 +547,28 @@ function TopUpModal({
         >
           Cancel
         </button>
+
         <button
           type="submit"
-          disabled={busy || !valid}
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busy || !valid || insufficient}
+          className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+            balanceAction === "add"
+              ? "bg-emerald-700 hover:bg-emerald-800"
+              : "bg-red-600 hover:bg-red-700"
+          }`}
         >
-          {busy ? "Adding funds..." : "Add funds"}
+          {busy
+            ? "Processing..."
+            : balanceAction === "add"
+              ? "Confirm addition"
+              : "Confirm deduction"}
         </button>
       </div>
     </Modal>
   );
 }
 
-/* ---------- delete ---------- */
+/* ---------------- Delete user ---------------- */
 
 function DeleteModal({
   user,
@@ -320,45 +582,73 @@ function DeleteModal({
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const ref = useRef<HTMLInputElement>(null);
 
-  useEffect(() => ref.current?.focus(), []);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const matches = confirm.trim().toLowerCase() === user.email.toLowerCase();
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const matches =
+    confirm.trim().toLowerCase() === user.email.toLowerCase();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+
     if (!matches) return;
+
     setBusy(true);
     setError("");
+
     try {
       await adminApi.deleteUser(user.uid);
       onDone(`Deleted ${label(user)} and all their records.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete this user. Try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not delete this user. Try again.",
+      );
       setBusy(false);
     }
   }
 
   return (
-    <Modal titleId="delete-title" busy={busy} onClose={onClose} onSubmit={submit}>
+    <Modal
+      titleId="delete-title"
+      busy={busy}
+      onClose={onClose}
+      onSubmit={submit}
+    >
       <div>
-        <h2 id="delete-title" className="text-lg font-semibold text-slate-900">
+        <h2
+          id="delete-title"
+          className="text-lg font-semibold text-slate-900"
+        >
           Delete {label(user)}?
         </h2>
+
         <p className="mt-1 text-sm text-slate-600">
-          This permanently removes the account and all of its investments, deposits, withdrawals, earnings and
-          transactions. It cannot be undone.
+          This permanently removes the account and its related records.
+          This action cannot be undone.
         </p>
       </div>
 
       <div>
-        <label htmlFor="delete-confirm" className="mb-1 block text-sm font-medium text-slate-700">
-          Type <span className="font-semibold text-slate-900">{user.email}</span> to confirm
+        <label
+          htmlFor="delete-confirm"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Type{" "}
+          <span className="font-semibold text-slate-900">
+            {user.email}
+          </span>{" "}
+          to confirm
         </label>
+
         <input
           id="delete-confirm"
-          ref={ref}
+          ref={inputRef}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           autoComplete="off"
@@ -367,7 +657,10 @@ function DeleteModal({
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </p>
       )}
@@ -381,6 +674,7 @@ function DeleteModal({
         >
           Cancel
         </button>
+
         <button
           type="submit"
           disabled={busy || !matches}

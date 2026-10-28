@@ -34,7 +34,7 @@ export default function Contact() {
           <dl className="mt-8 space-y-5 text-sm">
             <div><dt className="text-gold-400">Email</dt><dd className="text-base font-semibold">trustsignaltrade@gmail.com</dd></div>
             <div><dt className="text-gold-400">Phone</dt><dd className="text-base font-semibold">+1 (814) 619-1621</dd></div>
-            <div><dt className="text-gold-400">Hours</dt><dd className="text-base font-semibold">Mon–Fri, 8am–6pm WAT</dd></div>
+            <div><dt className="text-gold-400">Hours</dt><dd className="text-base font-semibold">Mon–Fri, 8am–6pm ET</dd></div>
           </dl>
         </div>
 
